@@ -7,9 +7,9 @@ We propose Xreport, a generalist foundation model trained on 335,311 radiology i
 
 Due to hospital privacy regulations and patient data protection requirements, the original training data and pre-trained models are **temporarily unavailable** for public release. We are actively working on data anonymization and de-identification processes to make the data available in the future. Besides, we provide the following demo files to facilitate understanding of the project:
 
-- `expert_system/YHY5_result_label.csv`: Sample medical reports (504 cases)
+- `expert_system/YHY5_result_label.csv`: Raw medical reports (504 cases)
 - `expert_system/data/ZJYY/tag.xlsx`: Medical ontology labels
-- `xreport/Comparision_exp_human_algo-YHY-5years.csv`: Clinical evaluation results
+- `expert_system/Comparision_exp_human_algo-YHY-5years.csv`: Processed training data (expert system output)
 - `xreport/ChestX-Det10-Dataset/test.json`: Sample dataset format
 
 # Installation
@@ -33,16 +33,28 @@ Xreport/
 │   ├── test_chestxray14.py          # ChestX-ray14 test script
 │   ├── test_chexpert.py             # CheXpert test script
 │   ├── test_padchest.py             # PadChest test script
+│   ├── zero_shot_inference.py       # Zero-shot inference script
+│   ├── demo_inference.py            # Demo inference script
 │   └── plot_visualize_512.py        # Visualization utilities
 ├── expert_system/                    # Expert system code
-│   ├── data/                        # Expert system data
-│   ├── main.py                      # Expert system main script
-│   └── utils.py                     # Expert system utilities
+│   ├── data/                         # Expert system data
+│   │   └── ZJYY/                    # Medical ontology files
+│   │       └── tag.xlsx
+│   ├── main.py                       # Expert system main script
+│   ├── run_expert_system.py          # Improved runner script
+│   ├── utils.py                      # Expert system utilities
+│   ├── YHY5_result_label.csv        # Demo: raw medical reports
+│   └── Comparision_exp_human_algo-YHY-5years.csv  # Demo: processed training data
 ├── requirements.txt                  # Python dependencies
-└── README.md                        # This file
+└── README.md                         # This file
 ```
 
 The `xreport/` directory contains the main Xreport model implementation, while `expert_system/` contains the expert system code for clinical decision support.
+
+## Workflow
+1. **Expert System**: Processes raw medical reports → structured training data
+2. **Xreport Model**: Trains on structured data → multi-disease diagnosis model
+3. **Clinical Evaluation**: Tests model performance in real hospital settings
 
 # Expert System
 
@@ -61,8 +73,9 @@ python expert_system/run_expert_system.py
 
 ## Demo Example
 Process `YHY5_result_label.csv` (504 radiology reports):
-- **Before**: Unstructured Chinese medical text
-- **After**: Structured data with 30+ disease categories (fracture, pneumonia, etc.)
+- **Input**: Raw medical reports with unstructured Chinese text
+- **Output**: `Comparision_exp_human_algo-YHY-5years.csv` with structured labels for Xreport training
+- **Features**: 26 classification labels + diagnostic text for CLIP training
 
 ## Input Format
 CSV file with columns:
@@ -105,15 +118,29 @@ python xreport/test_chexpert.py --config configs/Res_train_test.yaml
 python xreport/test_padchest.py --config configs/Res_train_test.yaml
 ```
 
+### Zero-shot Inference
+```bash
+# Basic inference on a single X-ray image
+python xreport/zero_shot_inference.py \
+    --image_path path/to/xray_image.jpg \
+    --checkpoint path/to/model_checkpoint.pth \
+    --dataset_type chestxray14 \
+    --threshold 0.3
+
+# Generate medical report
+python xreport/zero_shot_inference.py \
+    --image_path path/to/xray_image.jpg \
+    --checkpoint path/to/model_checkpoint.pth \
+    --dataset_type general \
+    --threshold 0.2 \
+    --output results.json
+
+# Demo script
+python xreport/demo_inference.py
+```
+
 ## Supported Datasets
 - **MIMIC-CXR**
 - **ChestX-ray14** 
 - **CheXpert**
 - **PadChest**
-
-## Model Performance
-Results from clinical evaluation (`Comparision_exp_human_algo-YHY-5years.csv`):
-- **Fracture Detection**: 9.8% sensitivity improvement
-- **Pneumonia Detection**: 6.0% sensitivity improvement  
-- **Intestinal Obstruction**: 5.4% sensitivity improvement
-- **30-day Mortality**: Significantly reduced in all test groups
